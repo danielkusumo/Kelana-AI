@@ -2,7 +2,7 @@
 
 > **Versi:** `v0.1.0`  
 > **Tipe Aplikasi:** Console App (Python)  
-> **Fokus:** Perencanaan Perjalanan (Trip Planner)
+> **Fokus:** Trip Planner
 
 ---
 
@@ -16,11 +16,11 @@
 
 ```
 kelana-ai/
-├── README.md                 # Dokumentasi proyek
+├── README.md
 ├── backend/
-│   └── main.py               # Logika utama aplikasi
+│   └── main.py
 └── frontend/
-    └── .gitkeep              # Placeholder untuk pengembangan frontend
+    └── .gitkeep
 ```
 
 ---
@@ -32,14 +32,6 @@ kelana-ai/
   - `days` dikonversi ke `int()`
   - `budget` dikonversi ke `float()`
 - **Output Terstruktur:** Menampilkan ringkasan perjalanan menggunakan `f-string` dengan format rapi.
-
----
-
-## Teknologi yang Digunakan
-
-- **Python 3.x**
-- **Git & GitHub** untuk version control dan release management
-- **Semantic Versioning** (`v0.1.0`)
 
 ---
 
@@ -56,7 +48,7 @@ kelana-ai/
    python backend/main.py
    ```
 
-3. Masukkan data sesuai petunjuk di terminal.
+3. Masukkan data sesuai masukkan yang diinginkan
 
 ---
 
@@ -69,7 +61,7 @@ KelanaAI
 Destination: Japan
 Country: Japan
 Days: 5
-Budget: 1500.0 USD
+Budget: 1500 USD
 Travel Month: December
 ```
 
@@ -79,18 +71,4 @@ Travel Month: December
 
 | Versi | Tag | Deskripsi |
 |-------|-----|-----------|
-| v0.1.0 | `v0.1.0` | Rilis awal - Console app dasar dengan fitur input dan output trip summary |
-
----
-
-## Pengembangan Selanjutnya
-
-- [ ] Pengembangan antarmuka pengguna (frontend)
-- [ ] Integrasi AI untuk rekomendasi destinasi
-- [ ] Penyimpanan data perjalanan ke database atau file
-
----
-
-## Lisensi
-
-Proyek ini dibuat untuk keperluan pembelajaran.
+| v0.1.0 | `v0.1.0` | Console app dasar dengan fitur input dan output trip summary |
