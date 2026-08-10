@@ -1,5 +1,5 @@
 def print_trip_summary(destination, country, days, budget, currency, travel_month):
-    # Format budget: hilangkan .0 jika bilangan bulat
+    # remove numbers after comma if it's integer
     if budget == int(budget):
         budget_str = f"{int(budget)}"
     else:
