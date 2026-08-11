@@ -55,14 +55,15 @@ kelana-ai/
 ## Contoh Output
 
 ```
-========================
+==========================
 KelanaAI
-========================
-Destination: Japan
-Country: Japan
-Days: 5
-Budget: 1500 USD
-Travel Month: December
+==========================
+Destination  : Japan
+Country      : USA
+Days         : 30
+Budget       : 22000 USD
+Currency     : USD
+Travel Month : January
 ```
 
 ---
