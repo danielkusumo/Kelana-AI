@@ -5,15 +5,15 @@ def print_trip_summary(destination, country, days, budget, currency, travel_mont
     else:
         budget_str = f"{budget}"
 
-    print("\n========================")
+    print("\n==========================")
     print("KelanaAI")
-    print("========================")
-    print(f"{'Destination':>12} : {destination}")
-    print(f"{'Country':>12}   : {country}")
-    print(f"{'Days':>12}     : {days}")
-    print(f"{'Budget':>12}    : {budget_str} {currency}")
-    print(f"{'Currency':>12}   : {currency}")
-    print(f"{'Travel Month':>12} : {travel_month}")
+    print("==========================")
+    print(f"Destination  : {destination}")
+    print(f"Country      : {country}")
+    print(f"Days         : {days}")
+    print(f"Budget       : {budget_str} {currency}")
+    print(f"Currency     : {currency}")
+    print(f"Travel Month : {travel_month}")
 
 def main():
     destination = input("Destination : ")
