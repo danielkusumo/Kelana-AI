@@ -1,14 +1,14 @@
 # KelanaAI
 
-> **Versi:** `v0.2.0`  
-> **Tipe Aplikasi:** Console App (Python)  
+> **Versi:** `v0.3.0`  
+> **Tipe Aplikasi:** Web API (FastAPI)  
 > **Fokus:** Trip Planner
 
 ---
 
 ## Deskripsi Proyek
 
-**KelanaAI** adalah aplikasi console sederhana berbasis Python yang dirancang untuk membantu pengguna merencanakan perjalanan. Aplikasi ini menerima input dari pengguna mengenai destinasi, durasi perjalanan, anggaran, mata uang, dan bulan perjalanan, lalu menampilkan ringkasan perjalanan dalam format yang rapi dan terstruktur.
+**KelanaAI** adalah aplikasi perencanaan perjalanan berbasis Web API menggunakan FastAPI. Aplikasi ini menyediakan endpoint untuk membuat rencana perjalanan dengan rekomendasi kategori, anggaran harian, serta transportasi yang disesuaikan dengan gaya perjalanan pengguna.
 
 ---
 
@@ -29,28 +29,64 @@ kelana-ai/
 
 ## Fitur Utama
 
-### v0.2.0 — Modularisasi Arsitektur & Presentation Layer
+### v0.3.0 — Transport Recommendation Endpoint & Trip Categories
 
-#### 1. Modularisasi Arsitektur (`backend/services/trip_service.py`)
+#### 1. Transport Recommendation Endpoint (`POST /api/v1/trips`)
 
-Logika bisnis perjalanan dipisahkan ke dalam modul tersendiri agar lebih terstruktur dan mudah dipelihara:
+Endpoint untuk membuat rencana perjalanan telah diperluas untuk menerima `travel_style` dan mengembalikan `recommended_transport` berdasarkan business rules yang ada.
 
-| Fungsi | Deskripsi |
-|--------|-----------|
-| `get_trip_category(budget)` | Menentukan kategori perjalanan berdasarkan anggaran: <br>• `< 1000` → **Backpacker** <br>• `1000 - 3000` → **Standard** <br>• `> 3000` → **Luxury** |
-| `get_travel_session(month)` | Menentukan musim perjalanan berdasarkan bulan: <br>• `December` → **Peak Season** <br>• `June` → **Holiday Season** <br>• Lainnya → **Regular Season** |
-| `calculate_daily_budget(budget, days)` | Menghitung anggaran harian dengan pembagian `budget / days` |
-| `get_recommendations(destination)` | Mengembalikan daftar tempat rekomendasi (tipe data `list`) berdasarkan destinasi menggunakan `dictionary` mapping |
-| `format_recommendations(places)` | Mengiterasi daftar tempat dengan `for loop` dan memformatnya menjadi string siap cetak |
+**Request:**
 
-#### 2. Implementasi Presentation Layer (`backend/main.py`)
+```json
+{
+  "destination": "Bali",
+  "days": 30,
+  "budget": 2000,
+  "travel_style": "Family"
+}
+```
 
-- **Impor Modul:** Mengimpor fungsi logika bisnis dari `services.trip_service`.
-- **Interaksi Pengguna (I/O):** Menangani masukan pengguna melalui `input()` dengan validasi:
-  - `get_positive_int()` — memastikan input hari adalah angka bulat positif (> 0).
-  - `get_non_negative_float()` — memastikan input anggaran adalah angka desimal non-negatif.
-- **Output dengan f-strings:** Menampilkan ringkasan perjalanan menggunakan `f-string` dengan format rapi dan informatif.
-- **Looping Interaktif:** Menggunakan `while loop` untuk memungkinkan pengguna menambahkan destinasi baru hingga memilih keluar.
+**Response:**
+
+```json
+{
+  "destination": "Bali",
+  "budget": 2000,
+  "daily_budget": 66.67,
+  "category": "Standard",
+  "recommended_transport": "Train"
+}
+```
+
+**Business Rules — `recommended_transport`:**
+
+| `travel_style` | `recommended_transport` |
+|----------------|---------------------------|
+| Backpacker     | Bus                       |
+| Standard       | Train                     |
+| Luxury         | Flight                    |
+
+**Business Rules — `category` (tetap dari sesi sebelumnya):**
+
+| Budget              | Category   |
+|---------------------|------------|
+| `< 1000`            | Backpacker |
+| `1000 - 3000`       | Standard   |
+| `> 3000`            | Luxury     |
+
+#### 2. List Trip Categories (`GET /api/v1/trip-categories`)
+
+Endpoint baru yang mengembalikan daftar semua kategori perjalanan yang valid.
+
+**Response:**
+
+```json
+[
+  "Backpacker",
+  "Standard",
+  "Luxury"
+]
+```
 
 ---
 
@@ -58,59 +94,69 @@ Logika bisnis perjalanan dipisahkan ke dalam modul tersendiri agar lebih terstru
 
 1. Clone repositori ini:
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/danielkusumo/Kelana-AI.git
    cd kelana-ai
    ```
 
-2. Jalankan aplikasi:
+2. Buat virtual environment:
    ```bash
-   python backend/main.py
+   python -m venv .venv
    ```
 
-3. Masukkan data sesuai petunjuk yang diberikan.
+3. Aktifkan virtual environment:
+   - **Windows:**
+     ```bash
+     .venv\Scripts\activate
+     ```
+   - **macOS/Linux:**
+     ```bash
+     source .venv/bin/activate
+     ```
+
+4. Install dependensi dari `requirements.txt`:
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
+
+5. Jalankan server:
+   ```bash
+   uvicorn backend.main:app --reload
+   ```
+
+4. Akses API melalui browser atau tools seperti Postman / curl:
+   - Root: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+   - Health Check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+   - Swagger UI (dokumentasi interaktif): [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
 ---
 
-## Contoh Output
+## Contoh Penggunaan dengan `curl`
 
+**POST /api/v1/trips**
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/trips" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "destination": "Bali",
+    "days": 30,
+    "budget": 2000,
+    "travel_style": "Family"
+  }'
 ```
-========================================
-Welcome to KelanaAI - Your Trip Planner!
-========================================
-Destination  : Bali
-Days         : 30
-Budget       : 2000
-Currency     : USD
-Travel Month : Jan
 
-==========================
-KelanaAI
-==========================
-Destination  : Bali
-Days         : 30
-Budget       : 2000 USD
-Category     : Standard
-Daily Budget : 66.67 USD/Day
-Travel Month : Jan
-Season       : Regular Season
-Transport    : Train
+**GET /api/v1/trip-categories**
 
-Recommended Places
-- Ubud
-- Seminyak
-- Nusa Penida
-- Uluwatu
-
-Do you want to add more destinations? (y/n): n
-
-Thank you for using KelanaAI. Safe travels!
+```bash
+curl -X GET "http://127.0.0.1:8000/api/v1/trip-categories"
 ```
 
 ---
 
 ## Riwayat Rilis
 
-| Versi | Tag | Deskripsi |
-|-------|-----|-----------|
+| Versi  | Tag      | Deskripsi |
+|--------|----------|-----------|
+| v0.3.0 | `v0.3.0` | Transformasi ke Web API (FastAPI): endpoint `POST /api/v1/trips` diperluas dengan `travel_style` & `recommended_transport`, serta penambahan endpoint `GET /api/v1/trip-categories` |
 | v0.2.0 | `v0.2.0` | Modularisasi arsitektur dengan pemisahan logika bisnis ke `trip_service.py` dan implementasi presentation layer dengan validasi input & loop interaktif di `main.py` |
 | v0.1.0 | `v0.1.0` | Console app dasar dengan fitur input dan output trip summary |
