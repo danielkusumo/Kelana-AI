@@ -25,6 +25,7 @@ def create_trip(req: TripRequest):
     recommended_transport = get_transport(req.travel_style) # asumsi travel_style seperti category
     return {
         "destination" : req.destination,
+        "days" : req.days,
         "budget" : req.budget,
         "daily_budget" : daily_budget,
         "category" : category,
