@@ -1,4 +1,5 @@
 from services.trip_service import (get_trip_category, calculate_daily_budget, get_transport, get_recommendations)
+from services.bedrock_service import get_ai_recommendation
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException
 from database import init_db, SessionLocal
@@ -22,11 +23,17 @@ def home():
 def status_check():
     return {"status" : "OK"}
 
-@app.post("/api/v1/trips")
+@app.post("/api/v1/trips/{id}/generate")
 def create_trip(req: TripRequest):
     daily_budget = calculate_daily_budget(req.budget, req.days)
     category = get_trip_category(req.budget)
     recommended_transport = get_transport(category) # asumsi travel_style seperti category
+    ai_recommendation = get_ai_recommendation(
+        destination=req.destination,
+        days=req.days,
+        budget=req.budget,
+        travel_style=req.travel_style
+    )
 
     # create a trip ORM objects
     trip = Trip (
@@ -37,6 +44,7 @@ def create_trip(req: TripRequest):
         daily_budget = daily_budget,
         category = category,
         recommended_transport = recommended_transport,
+        ai_recommendation = ai_recommendation,
     )
 
     # save to PostgreSQL
