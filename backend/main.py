@@ -27,7 +27,7 @@ def status_check():
 def create_trip(req: TripRequest):
     daily_budget = calculate_daily_budget(req.budget, req.days)
     category = get_trip_category(req.budget)
-    recommended_transport = get_transport(category) # asumsi travel_style seperti category
+    recommended_transport = get_transport(category)
     ai_recommendation = get_ai_recommendation(
         destination=req.destination,
         days=req.days,

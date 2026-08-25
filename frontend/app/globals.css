@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+:root {
+  --background: #050510;
+  --foreground: #e2e8f0;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-space-grotesk);
+  --font-mono: var(--font-space-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-space-grotesk), Arial, Helvetica, sans-serif;
+}
+
+/* Cosmic background gradient */
+.cosmic-bg {
+  background: radial-gradient(ellipse at top, #1a1030 0%, #050510 50%, #0f0a1a 100%);
+  min-height: 100vh;
+}
+
+/* Subtle nebula effect */
+.nebula-1 {
+  position: fixed;
+  top: -20%;
+  left: -10%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.nebula-2 {
+  position: fixed;
+  bottom: -20%;
+  right: -10%;
+  width: 50vw;
+  height: 50vw;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.5);
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Number input spinner — completely invisible / glass-matched */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: inner-spin-button !important;
+  appearance: inner-spin-button !important;
+  opacity: 0.06 !important;
+  background: transparent !important;
+  border: none !important;
+  color: transparent !important;
+  cursor: pointer;
+  filter: none !important;
+  transition: opacity 0.2s ease;
+}
+
+input[type="number"]:hover::-webkit-inner-spin-button,
+input[type="number"]:hover::-webkit-outer-spin-button {
+  opacity: 0.2 !important;
+}
+
+input[type="number"]:focus::-webkit-inner-spin-button,
+input[type="number"]:focus::-webkit-outer-spin-button {
+  opacity: 0.25 !important;
+}
+
+/* Firefox spinner */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Markdown prose overrides */
+.prose-invert h1,
+.prose-invert h2,
+.prose-invert h3 {
+  color: white;
+}
+
+.prose-invert p {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.prose-invert strong {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.prose-invert a {
+  color: #fbbf24;
+  text-decoration: none;
+}
+
+.prose-invert a:hover {
+  text-decoration: underline;
+}
