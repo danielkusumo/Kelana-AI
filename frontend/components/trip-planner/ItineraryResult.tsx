@@ -31,7 +31,6 @@ export default function ItineraryResult({ trip, onReset }: ItineraryResultProps)
         transition={{ duration: 0.5 }}
         className="relative h-40 sm:h-48 md:h-56 rounded-2xl overflow-hidden border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)]"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={heroImage}
           alt={trip.destination}

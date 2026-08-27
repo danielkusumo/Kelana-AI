@@ -9,7 +9,14 @@ import {
   Compass,
   Sparkles,
   Rocket,
+  ChevronDown,
 } from "lucide-react";
+
+const TRAVEL_STYLES = [
+  { value: "Family", label: "Family" },
+  { value: "Solo", label: "Solo" },
+  { value: "Couple", label: "Couple" },
+];
 import { TripRequest } from "@/types/trip";
 import GlassCard from "@/components/ui/GlassCard";
 
@@ -22,7 +29,7 @@ export default function TripForm({ onSubmit, isLoading }: TripFormProps) {
   const [destination, setDestination] = useState("");
   const [budget, setBudget] = useState("");
   const [days, setDays] = useState("");
-  const [travelStyle, setTravelStyle] = useState("");
+  const [travelStyle, setTravelStyle] = useState<string>("Standard");
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -32,7 +39,7 @@ export default function TripForm({ onSubmit, isLoading }: TripFormProps) {
       destination,
       budget: Number(budget),
       days: Number(days),
-      travel_style: travelStyle || "Standard",
+      travel_style: travelStyle,
     });
   };
 
@@ -134,7 +141,7 @@ export default function TripForm({ onSubmit, isLoading }: TripFormProps) {
           </div>
         </motion.div>
 
-        {/* Travel Style — free text input */}
+        {/* Travel Style — dropdown */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -142,19 +149,24 @@ export default function TripForm({ onSubmit, isLoading }: TripFormProps) {
           className="relative"
         >
           <Compass
-            className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors duration-300 ${
+            className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors duration-300 pointer-events-none ${
               focusedField === "travelStyle" ? "text-amber-400" : "text-white/30"
             }`}
           />
-          <input
-            type="text"
-            placeholder="Travel style (e.g. Fun, Business, Family)"
+          <select
             value={travelStyle}
             onChange={(e) => setTravelStyle(e.target.value)}
             onFocus={() => setFocusedField("travelStyle")}
             onBlur={() => setFocusedField(null)}
-            className={inputClasses}
-          />
+            className={`${inputClasses} appearance-none cursor-pointer pr-12`}
+          >
+            {TRAVEL_STYLES.map((style) => (
+              <option key={style.value} value={style.value} className="bg-[#0f0a1a] text-white">
+                {style.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
         </motion.div>
 
         {/* Submit Button */}

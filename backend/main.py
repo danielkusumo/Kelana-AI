@@ -1,9 +1,10 @@
-from services.trip_service import (get_trip_category, calculate_daily_budget, get_transport, get_recommendations)
-from services.bedrock_service import get_ai_recommendation
-from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from database import init_db, SessionLocal
 from models.trip import Trip
+from services.trip_service import (get_trip_category, calculate_daily_budget, get_transport, get_recommendations)
+from services.bedrock_service import get_ai_recommendation
 
 class TripRequest(BaseModel):
     destination: str
@@ -12,6 +13,15 @@ class TripRequest(BaseModel):
     travel_style: str
 
 app = FastAPI()
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 init_db()
 

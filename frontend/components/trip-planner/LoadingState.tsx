@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
-import { Rocket, Sparkles, Globe, MapPin, Utensils, Hotel, Camera, Check } from "lucide-react";
+import { Rocket, Sparkles, Globe, MapPin, Utensils, Hotel, Camera } from "lucide-react";
 
 interface LoadingStateProps {
   onComplete?: () => void;
@@ -32,9 +32,12 @@ export default function LoadingState({ onComplete, dataReady }: LoadingStateProp
   const [messageIndex, setMessageIndex] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
   const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const doneRef = useRef(false);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   const fireComplete = () => {
     if (doneRef.current) return;
@@ -67,13 +70,14 @@ export default function LoadingState({ onComplete, dataReady }: LoadingStateProp
 
   // Percepat ketika backend sudah mengirim data
   useEffect(() => {
-    if (dataReady) {
+    if (!dataReady) return;
+    const timeoutId = setTimeout(() => {
       setCurrentStep(processSteps.length);
       if (intervalRef.current) clearInterval(intervalRef.current);
       // jeda singkat agar semua checkmark, lalu selesaikan
-      const t = setTimeout(fireComplete, 600);
-      return () => clearTimeout(t);
-    }
+      setTimeout(fireComplete, 600);
+    }, 0);
+    return () => clearTimeout(timeoutId);
   }, [dataReady]);
 
   const allDone = currentStep >= processSteps.length;
