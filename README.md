@@ -1,8 +1,8 @@
 # KelanaAI
 
-> **Versi:** `v0.7.0`  
+> **Versi:** `v0.8.0`  
 > **Tipe Aplikasi:** Full-Stack Web App (FastAPI Backend + Next.js Frontend)  
-> **Fokus:** Trip Planner dengan Database PostgreSQL, AI-Powered Itinerary (AWS Bedrock), Dashboard History & Search/Sort
+> **Fokus:** Trip Planner dengan Database PostgreSQL, AI-Powered Itinerary (AWS Bedrock), **Authentication (JWT) & Per-User Data Ownership**
 
 ---
 
@@ -10,11 +10,13 @@
 
 **KelanaAI** adalah aplikasi perencanaan perjalanan full-stack yang terdiri dari:
 
-- **Backend (Web API):** FastAPI + PostgreSQL + AWS Bedrock. Menyediakan CRUD lengkap serta menghasilkan rekomendasi itinerary detail (jadwal harian, estimasi anggaran, kuliner, transportasi) menggunakan AI.
+- **Backend (Web API):** FastAPI + PostgreSQL + AWS Bedrock. Menyediakan CRUD lengkap serta menghasilkan rekomendasi itinerary detail (jadwal harian, estimasi anggaran, kuliner, transportasi) menggunakan AI. Dilengkapi **autentikasi JWT** dan **ownership check** — setiap user hanya dapat melihat, mengubah, dan menghapus trip miliknya sendiri.
 - **Frontend (Next.js):** Antarmuka web futuristik bertema *space/cosmic* dengan fitur utama:
-  - **Home** (`/`) — Form trip planner + loading animasi + auto-redirect ke dashboard setelah AI selesai
-  - **Dashboard** (`/trips`) — History semua trip dengan **search & sort**
-  - **Detail** (`/trips/[id]`) — Tampilan itinerary AI per trip dengan hero image
+  - **Home** (`/`) — Form trip planner + loading animasi + auto-redirect ke dashboard setelah AI selesai (wajib login)
+  - **Login / Register** — Halaman autentikasi akun
+  - **Profile** (`/profile`) — Info pengguna yang sedang login
+  - **Dashboard** (`/trips`) — History trip milik user dengan **search, sort & pagination**
+  - **Detail** (`/trips/[id]`) — Tampilan itinerary AI per trip dengan hero image + tombol delete
 
 ---
 
@@ -23,44 +25,120 @@
 ```
 kelana-ai/
 ├── README.md
+├── assets/                      # Screenshots halaman (generate, register, signin, trips)
 ├── backend/
-│   ├── main.py                    # FastAPI app & API endpoints (dengan CORS)
-│   ├── database.py                # SQLAlchemy engine, session, Base
-│   ├── .env                       # Environment variables (DB + AWS)
-│   ├── requirements.txt           # Python dependencies
+│   ├── main.py                   # FastAPI app & API endpoints (CORS + auth)
+│   ├── database.py               # SQLAlchemy engine, session, Base
+│   ├── .env                      # Environment variables (DB + AWS + JWT)
+│   ├── requirements.txt          # Python dependencies
 │   ├── models/
-│   │   └── trip.py                # SQLAlchemy ORM model for Trip
+│   │   ├── trip.py               # SQLAlchemy ORM model for Trip (dengan user_id)
+│   │   ├── user.py               # SQLAlchemy ORM model for User
+│   │   └── migrate.py            # Custom SQL migration runner
+│   ├── migrations/               # 001_create_users.sql, 002_add_user_id_to_trips.sql
 │   └── services/
-│       ├── trip_service.py        # Business logic & helper functions
-│       └── bedrock_service.py     # AWS Bedrock AI integration
+│       ├── trip_service.py       # Business logic & helper functions
+│       ├── bedrock_service.py    # AWS Bedrock AI integration
+│       └── auth_service.py       # Register, login, JWT, password hashing
 └── frontend/
-    ├── .env.local                 # API_URL (gitignored)
+    ├── .env.local                # API_URL
     ├── app/
-    │   ├── layout.tsx             # Root layout (fonts + footer)
-    │   ├── globals.css            # Tema space/cosmic & animasi
-    │   ├── page.tsx               # Halaman utama (form → loading → redirect)
+    │   ├── layout.tsx            # Root layout (fonts + footer)
+    │   ├── globals.css           # Tema space/cosmic & animasi
+    │   ├── page.tsx              # Halaman utama (form → loading → redirect)
+    │   ├── login/                # Halaman login
+    │   ├── register/             # Halaman registrasi
+    │   ├── profile/              # Halaman profil pengguna
     │   └── trips/
-    │       ├── page.tsx           # Dashboard history (search + sort)
-    │       └── [id]/page.tsx      # Detail trip itinerary
+    │       ├── page.tsx          # Dashboard history (search + sort + pagination)
+    │       └── [id]/page.tsx     # Detail trip itinerary (+ tombol delete)
     ├── components/
     │   ├── ui/
-    │   │   └── GlassCard.tsx      # Komponen card glassmorphism
-    │   ├── TripCard.tsx           # Kartu reusable untuk setiap trip
-    │   └── trip-planner/          # TripForm, ItineraryResult, ItineraryContent,
-    │                              # LoadingState, StarField
+    │   │   └── GlassCard.tsx     # Komponen card glassmorphism
+    │   ├── AuthForm.tsx          # Form login & register (reusable)
+    │   ├── RequireAuth.tsx       # Guard route (redirect ke login jika belum auth)
+    │   ├── ConfirmModal.tsx      # Modal konfirmasi (delete, logout)
+    │   ├── TripCard.tsx          # Kartu reusable untuk setiap trip
+    │   └── trip-planner/         # TripForm, ItineraryResult, ItineraryContent,
+    │                             # LoadingState, StarField
     ├── services/
-    │   └── tripService.ts         # API calls ke backend (getTrips, getTrip, generateTrip)
+    │   ├── tripService.ts        # API calls ke backend (getTrips, getTrip, generateTrip, deleteTrip)
+    │   └── authService.ts        # Auth API calls + session (token) management
     ├── lib/
-    │   └── destination.ts         # Pemetaan destinasi → hero image
+    │   └── destination.ts        # Pemetaan destinasi → hero image & flag
     ├── types/
-    │   └── trip.ts                # TypeScript interfaces (TripRequest, TripResponse)
-    ├── public/                    # Hero images (America, China, Indonesia, Japan, Singapore, world)
+    │   ├── trip.ts               # TypeScript interfaces (TripRequest, TripResponse)
+    │   └── auth.ts               # TypeScript interfaces (AuthResponse, AuthUser, dll)
+    ├── public/                   # Hero images (America, China, Indonesia, Japan, Singapore, world)
     └── package.json
 ```
 
 ---
 
 ## Fitur Utama
+
+### v0.8.0 — Authentication (JWT) & Per-User Data Ownership
+
+#### 1. Autentikasi Pengguna (JWT)
+
+Sistem autentikasi berbasis **JWT (JSON Web Token)** dengan hashing password **bcrypt**:
+
+- **Register** (`POST /api/v1/auth/register`) — buat akun baru (name, email, password), langsung mengembalikan token
+- **Login** (`POST /api/v1/auth/login`) — verifikasi kredensial, mengembalikan `access_token` (HS256, dengan expiry)
+- **Session** — token disimpan di `localStorage` oleh frontend; dikirim sebagai header `Authorization: Bearer <token>`
+- **Protected endpoints** — endpoint trip mewajibkan token valid; tanpa token → `401`, token invalid/expired → `401`
+
+#### 2. Halaman Login & Register
+
+UI autentikasi bertema sama dengan aplikasi, reusable via `AuthForm.tsx`:
+
+- **Login** (`/login`) — email + password, link ke register, redirect kembali ke halaman asal (`?next=`)
+- **Register** (`/register`) — name + email + password, link ke login
+- Validasi error (email duplikat, kredensial salah) ditampilkan inline
+
+#### 3. Route Protection (Frontend)
+
+Komponen `RequireAuth` membungkus halaman-halaman yang dilindungi. Jika belum login, pengguna otomatis di-arahkan ke `/login`:
+
+- **Home** (`/`) — form generate trip
+- **Trips** (`/trips`) — daftar trip
+- **Trip Detail** (`/trips/[id]`) — detail itinerary
+- **Profile** (`/profile`) — profil pengguna
+
+#### 4. Per-User Data Ownership (Backend)
+
+Endpoint trip kini memfilter dan memvalidasi berdasarkan `user_id` dari token:
+
+| Requirement | Perilaku |
+|-------------|----------|
+| **View: Only own trips** | `GET /api/v1/trips` hanya mengembalikan trip milik user yang login (`filter(user_id == current)`) |
+| **Update: Reject others** | `PUT /api/v1/trips/{id}` mengembalikan **403** jika `trip.user_id != user_id` |
+| **Delete: Reject others** | `DELETE /api/v1/trips/{id}` mengembalikan **403** jika `trip.user_id != user_id` |
+| **Get single trip** | `GET /api/v1/trips/{id}` mengembalikan **403** jika bukan milik user |
+
+Setiap trip baru otomatis menyimpan `user_id` dari token saat dibuat.
+
+#### 5. Halaman Profile (`/profile`)
+
+Menampilkan informasi pengguna yang sedang login: avatar placeholder bergaya **Instagram** (inisial), nama, dan email, plus tombol **Log out** dengan konfirmasi.
+
+#### 6. Konfirmasi untuk Aksi Berbahaya
+
+- **Delete trip** — tombol "Delete" di halaman detail memunculkan dialog konfirmasi sebelum menghapus
+- **Log out** — tombol "Log out" di home/profile memunculkan dialog konfirmasi (via komponen reusable `ConfirmModal`)
+
+---
+
+## Screenshots
+
+| Halaman | Gambar |
+|---------|--------|
+| Generate Trip (Home) | ![Generate Trip](assets/generate.png) |
+| Register | ![Register](assets/register.png) |
+| Sign In (Login) | ![Sign In](assets/signin.png) |
+| My Trips (Dashboard) | ![My Trips](assets/trips.png) |
+
+---
 
 ### v0.7.0 — Dashboard History, Search & Sort, Direct API
 
@@ -249,15 +327,24 @@ class Trip(Base):
 
 ## API Endpoints (Backend)
 
+### Auth
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| `POST` | `/api/v1/auth/register` | Membuat akun baru (name, email, password) → mengembalikan JWT |
+| `POST` | `/api/v1/auth/login` | Login (email, password) → mengembalikan JWT |
+
 ### Full CRUD
+
+> **Catatan:** Semua endpoint trip di bawah mewajibkan header `Authorization: Bearer <token>`. Data dibatasi hanya milik user yang login (`user_id` dari token).
 
 | Method | Endpoint | Deskripsi |
 |--------|----------|-----------|
 | `POST` | `/api/v1/trips/{id}/generate` | Membuat rencana perjalanan baru + generate AI itinerary |
-| `GET`  | `/api/v1/trips` | Mengambil semua daftar perjalanan |
-| `GET`  | `/api/v1/trips/{trip_id}` | Mengambil detail perjalanan berdasarkan ID |
-| `PUT`  | `/api/v1/trips/{trip_id}` | Memperbarui data perjalanan berdasarkan ID |
-| `DELETE` | `/api/v1/trips/{trip_id}` | Menghapus perjalanan berdasarkan ID |
+| `GET`  | `/api/v1/trips` | Mengambil daftar perjalanan **milik user** |
+| `GET`  | `/api/v1/trips/{trip_id}` | Mengambil detail perjalanan (403 jika bukan milik user) |
+| `PUT`  | `/api/v1/trips/{trip_id}` | Memperbarui data perjalanan (403 jika bukan milik user) |
+| `DELETE` | `/api/v1/trips/{trip_id}` | Menghapus perjalanan (403 jika bukan milik user) |
 
 ### Supporting Endpoints
 
@@ -271,11 +358,14 @@ class Trip(Base):
 
 ## Frontend Routes
 
-| Route | Halaman | Deskripsi |
-|-------|---------|-----------|
-| `/` | Home | Form trip planner + loading + auto-redirect ke `/trips` |
-| `/trips` | Dashboard | History semua trip dengan search & sort |
-| `/trips/{id}` | Detail | Itinerary lengkap per trip (dynamic route) |
+| Route | Halaman | Deskripsi | Proteksi |
+|-------|---------|-----------|----------|
+| `/` | Home | Form trip planner + loading + auto-redirect ke `/trips` | ✅ Wajib login |
+| `/login` | Login | Form autentikasi masuk | — |
+| `/register` | Register | Form pendaftaran akun | — |
+| `/profile` | Profile | Info pengguna + logout | ✅ Wajib login |
+| `/trips` | Dashboard | History trip milik user dengan search & sort | ✅ Wajib login |
+| `/trips/{id}` | Detail | Itinerary lengkap per trip + tombol delete | ✅ Wajib login |
 
 ---
 
@@ -382,6 +472,10 @@ AWS_BEARER_TOKEN_BEDROCK=your_bearer_token_here
 
 # Optional: Model ID (default: amazon.nova-lite-v1:0)
 MODEL_ID=amazon.nova-lite-v1:0
+
+# JWT
+JWT_SECRET_KEY=your_super_secret_key
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
 
 > **Requirements:**
@@ -439,11 +533,30 @@ npm run dev
 
 ## Contoh Penggunaan dengan `curl`
 
+> **Catatan:** Endpoint trip memerlukan header `Authorization: Bearer <token>`. Dapatkan token lewat register/login di bawah.
+
+### Register (buat akun)
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Your Name", "email": "you@example.com", "password": "secret123"}'
+```
+
+### Login (dapatkan token)
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "you@example.com", "password": "secret123"}'
+```
+
 ### Create Trip (dengan AI Itinerary)
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/v1/trips/0/generate" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -d '{
     "destination": "Bali",
     "days": 5,
@@ -452,16 +565,18 @@ curl -X POST "http://127.0.0.1:8000/api/v1/trips/0/generate" \
   }'
 ```
 
-### List All Trips
+### List All Trips (hanya milik user)
 
 ```bash
-curl -X GET "http://127.0.0.1:8000/api/v1/trips"
+curl -X GET "http://127.0.0.1:8000/api/v1/trips" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 ### Get Trip by ID
 
 ```bash
-curl -X GET "http://127.0.0.1:8000/api/v1/trips/1"
+curl -X GET "http://127.0.0.1:8000/api/v1/trips/1" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 ### Update Trip
@@ -469,6 +584,7 @@ curl -X GET "http://127.0.0.1:8000/api/v1/trips/1"
 ```bash
 curl -X PUT "http://127.0.0.1:8000/api/v1/trips/1" \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -d '{
     "destination": "Lombok",
     "days": 7,
@@ -480,7 +596,8 @@ curl -X PUT "http://127.0.0.1:8000/api/v1/trips/1" \
 ### Delete Trip
 
 ```bash
-curl -X DELETE "http://127.0.0.1:8000/api/v1/trips/1"
+curl -X DELETE "http://127.0.0.1:8000/api/v1/trips/1" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 ---
@@ -497,6 +614,8 @@ curl -X DELETE "http://127.0.0.1:8000/api/v1/trips/1"
 | psycopg2-binary | — | PostgreSQL driver |
 | python-dotenv | 1.0.0 | Environment variable loader |
 | boto3 | 1.43.56 | AWS SDK untuk Bedrock integration |
+| bcrypt | — | Hashing password |
+| python-jose | — | JWT encoding/decoding |
 
 ### Frontend (Node.js)
 
@@ -517,7 +636,8 @@ curl -X DELETE "http://127.0.0.1:8000/api/v1/trips/1"
 
 | Versi  | Tag      | Deskripsi |
 |--------|----------|-----------|
-| **v0.7.0** | `v0.7.0` | **Dashboard History + Search & Sort + Direct API**: penambahan halaman `/trips` (history grid dengan search, sort & pagination), halaman `/trips/[id]` (detail itinerary), auto-redirect ke dashboard setelah generate, direct browser→backend via CORS, `services/tripService.ts`, `TripCard.tsx` (flag destinasi, format `USD 2,000`, category badge color-coded, travel style badge), dan `.env.local` |
+| **v0.8.0** | `v0.8.0` | **Authentication & Per-User Ownership**: penambahan `auth_service.py` (register, login, JWT HS256 + bcrypt), model `User` & kolom `user_id` di `Trip`, migrasi `001_create_users` & `002_add_user_id_to_trips`, endpoint `/api/v1/auth/*`, ownership check (GET/PUT/DELETE return 403 jika bukan milik user), halaman `/login`, `/register`, `/profile`, komponen `RequireAuth` & `ConfirmModal`, tombol delete trip dengan konfirmasi, dan logout dengan konfirmasi |
+| v0.7.0 | `v0.7.0` | **Dashboard History + Search & Sort + Direct API**: penambahan halaman `/trips` (history grid dengan search, sort & pagination), halaman `/trips/[id]` (detail itinerary), auto-redirect ke dashboard setelah generate, direct browser→backend via CORS, `services/tripService.ts`, `TripCard.tsx` (flag destinasi, format `USD 2,000`, category badge color-coded, travel style badge), dan `.env.local` |
 | v0.6.0 | `v0.6.0` | **Next.js Frontend**: penambahan frontend Next.js dengan UI space/cosmic, trip planner form, hero destination image, render itinerary AI yang rapi (day-by-day timeline, budget table, food & transport suggestions), loading state animasi, responsive layout, dan footer |
 | v0.5.0 | `v0.5.0` | **AWS Bedrock AI Integration**: penambahan `bedrock_service.py` untuk generate AI-powered travel itinerary, update model `Trip` dengan kolom `ai_recommendation` & `created_at`, serta integrasi `boto3` |
 | v0.4.0 | `v0.4.0` | PostgreSQL Database Integration: penambahan `database.py`, SQLAlchemy ORM model `Trip`, dan full CRUD endpoints dengan persistensi data ke PostgreSQL |

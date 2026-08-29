@@ -18,6 +18,9 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False)
 # Base = all ORM models inherit from this
 Base = declarative_base()
 
+import models.trip
+import models.user
+
 # create all tables
 def init_db() -> None:
   """Create all SQLAlchemy tables for the configured database."""

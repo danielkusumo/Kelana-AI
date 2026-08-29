@@ -19,6 +19,7 @@ import GlassCard from "@/components/ui/GlassCard";
 import { TripResponse } from "@/types/trip";
 import { getTrips } from "@/services/tripService";
 import TripCard from "@/components/TripCard";
+import RequireAuth from "@/components/RequireAuth";
 
 type SortOption =
   | "newest"
@@ -137,30 +138,31 @@ export default function TripsPage() {
   };
 
   return (
-    <main className="cosmic-bg relative flex-1 flex flex-col overflow-x-hidden">
-      <div className="nebula-1" />
-      <div className="nebula-2" />
+    <RequireAuth>
+      <main className="cosmic-bg relative flex-1 flex flex-col overflow-x-hidden">
+        <div className="nebula-1" />
+        <div className="nebula-2" />
 
-      <div className="relative z-10 flex flex-col flex-1 items-center px-4 py-8">
-        {/* Logo */}
-        {/* <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="w-full max-w-5xl mb-4"
-        >
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors"
+        <div className="relative z-10 flex flex-col flex-1 items-center px-4 py-8">
+          {/* Logo */}
+          {/* <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="w-full max-w-5xl mb-4"
           >
-            <div className="p-2 rounded-lg bg-violet-500/15 border border-violet-500/25">
-              <Sparkles className="w-5 h-5 text-violet-300" />
-            </div>
-            <span className="text-lg font-bold tracking-tight">KelanaAI</span>
-          </Link>
-        </motion.div> */}
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors"
+            >
+              <div className="p-2 rounded-lg bg-violet-500/15 border border-violet-500/25">
+                <Sparkles className="w-5 h-5 text-violet-300" />
+              </div>
+              <span className="text-lg font-bold tracking-tight">KelanaAI</span>
+            </Link>
+          </motion.div> */}
 
-        {/* Header */}
+          {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -452,8 +454,9 @@ export default function TripsPage() {
               )}
             </>
           )}
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </RequireAuth>
   );
 }
