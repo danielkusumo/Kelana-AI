@@ -7,26 +7,29 @@ load_dotenv()
 def get_bedrock_client():
     """
     Configure and return a Bedrock runtime client.
-    Uses AWS_BEARER_TOKEN_BEDROCK for bearer token authentication
-    and AWS_REGION from the .env file.
+    Uses explicit credentials from the .env file (AWS_REGION, AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY) and falls back to the bearer token if the key pair is absent.
     """
 
     region = os.getenv("AWS_REGION")
-    bearer_token = os.getenv("AWS_BEARER_TOKEN_BEDROCK")
+    access_key = os.getenv("AWS_ACCESS_KEY_ID")
+    secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
 
     if not region:
         raise ValueError("AWS_REGION is not set in the environment.")
-    if not bearer_token:
-        raise ValueError("AWS_BEARER_TOKEN_BEDROCK is not set in the environment.")
 
-    client = boto3.client(
-        service_name="bedrock-runtime",
-        region_name=region,
-        aws_session_token=bearer_token,
-    )
+    kwargs = {"service_name": "bedrock-runtime", "region_name": region}
 
-    return client
+    if access_key and secret_key:
+        kwargs["aws_access_key_id"] = access_key
+        kwargs["aws_secret_access_key"] = secret_key
+    else:
+        bearer_token = os.getenv("AWS_BEARER_TOKEN_BEDROCK")
+        if not bearer_token:
+            raise ValueError("AWS credentials are not set in the environment.")
+        kwargs["aws_session_token"] = bearer_token
 
+    return boto3.client(**kwargs)
 
 def get_ai_recommendation(destination: str, days: int, budget: float, travel_style: str) -> str:
     """
@@ -106,6 +109,32 @@ def get_ai_recommendation(destination: str, days: int, budget: float, travel_sty
     )
 
     # Extract the text from the response
+    output_message = response["output"]["message"]
+    text_parts = [
+        block["text"]
+        for block in output_message["content"] if "text" in block
+    ]
+    return "\n".join(text_parts)
+
+
+def ask_base_model(question: str) -> str:
+    """
+    Ask the base foundation model directly (NO knowledge base) and return its answer.
+
+    This is used as a comparison baseline against the RAG-based `ask_knowledge_base`.
+    """
+    model_id = os.getenv("MODEL_ID", "amazon.nova-lite-v1:0")
+
+    messages = [
+        {
+            "role": "user",
+            "content": [{"text": question}],
+        }
+    ]
+
+    client = get_bedrock_client()
+    response = client.converse(modelId=model_id, messages=messages)
+
     output_message = response["output"]["message"]
     text_parts = [
         block["text"]

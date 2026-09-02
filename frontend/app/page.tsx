@@ -21,6 +21,7 @@ import {
   LogOut,
   User,
   Loader2,
+  Bot,
 } from "lucide-react";
 import { clearSession } from "@/services/authService";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -103,6 +104,13 @@ export default function Home() {
       >
         <User className="w-4 h-4" />
         {userName || "Profile"}
+      </Link>
+      <Link
+        href="/ask"
+        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all text-sm"
+      >
+        <Bot className="w-4 h-4" />
+        Ask Bot
       </Link>
       <button
         onClick={() => setShowLogoutConfirm(true)}

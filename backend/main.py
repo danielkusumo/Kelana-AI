@@ -4,8 +4,9 @@ from pydantic import BaseModel
 from database import init_db, SessionLocal
 from models.trip import Trip
 from services.trip_service import (get_trip_category, calculate_daily_budget, get_transport, get_recommendations)
-from services.bedrock_service import get_ai_recommendation
+from services.bedrock_service import get_ai_recommendation, ask_base_model
 from services.auth_service import register, login, get_user_id
+from services.kb_service import ask_knowledge_base
 
 class TripRequest(BaseModel):
     destination: str
@@ -21,6 +22,9 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+class QuestionRequest(BaseModel):
+    question: str
 
 app = FastAPI()
 
@@ -167,3 +171,28 @@ def register_user(req: RegisterRequest):
 @app.post("/api/v1/auth/login")
 def login_user(req: LoginRequest):
     return login(email=req.email, password=req.password)
+
+@app.post("/api/v1/ask")
+def ask_endpoint(req: QuestionRequest):
+    try:
+        result = ask_knowledge_base(req.question)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Knowledge base error: {str(e)}")
+    return {
+        "question": req.question,
+        "answer": result["answer"],
+        "sources": result["sources"],
+        "accepted": result["accepted"],
+    }
+
+# API pembanding base model dengan RAG
+@app.post("/api/v1/ask/base")
+def ask_base_endpoint(req: QuestionRequest):
+    try:
+        answer = ask_base_model(req.question)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Base model error: {str(e)}")
+    return {
+        "question": req.question,
+        "answer": answer,
+    }
