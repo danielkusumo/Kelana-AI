@@ -33,7 +33,12 @@ class MessageRequest(BaseModel):
 class ConversationUpdateRequest(BaseModel):
     title: str
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db() # pertama kali startup
+    yield
+
+app = FastAPI(lifespan=lifespan)
 
 # CORS middleware
 app.add_middleware(
@@ -43,8 +48,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-init_db()
 
 @app.get("/")
 def home():
