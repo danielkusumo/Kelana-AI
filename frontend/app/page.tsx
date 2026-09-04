@@ -23,6 +23,8 @@ import {
   Loader2,
   MessageSquare,
   Bot,
+  Menu,
+  X,
 } from "lucide-react";
 import { clearSession } from "@/services/authService";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -39,6 +41,7 @@ export default function Home() {
   const [authState, setAuthState] = useState<AuthState>("checking");
   const [userName, setUserName] = useState<string | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const dataReadyRef = useRef(false);
   const loadingDoneRef = useRef(false);
@@ -98,43 +101,111 @@ export default function Home() {
   };
 
   const navAuthed = (
-    <div className="flex items-center gap-2">
-      <Link
-        href="/profile"
-        className="flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-200 text-sm hover:bg-violet-500/20 transition-all"
-      >
-        <User className="w-4 h-4" />
-        {userName || "Profile"}
-      </Link>
-      <Link
-        href="/ask"
-        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all text-sm"
-      >
-        <Bot className="w-4 h-4" />
-        Ask KB
-      </Link>
-      <Link
-        href="/chat"
-        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all text-sm"
-      >
-        <MessageSquare className="w-4 h-4" />
-        Chat
-      </Link>
-      <button
-        onClick={() => setShowLogoutConfirm(true)}
-        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all text-sm"
-      >
-        <LogOut className="w-4 h-4" />
-        Logout
-      </button>
-      <Link
-        href="/trips"
-        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all text-sm"
-      >
-        <Compass className="w-4 h-4" />
-        My Trips
-      </Link>
-    </div>
+    <>
+      {/* Desktop: pill row */}
+      <div className="hidden sm:flex items-center gap-2">
+        <Link
+          href="/profile"
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-200 text-sm hover:bg-violet-500/20 transition-all"
+        >
+          <User className="w-4 h-4" />
+          {userName || "Profile"}
+        </Link>
+        <Link
+          href="/ask"
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all text-sm"
+        >
+          <Bot className="w-4 h-4" />
+          Ask KB
+        </Link>
+        <Link
+          href="/chat"
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all text-sm"
+        >
+          <MessageSquare className="w-4 h-4" />
+          Chat
+        </Link>
+        <button
+          onClick={() => setShowLogoutConfirm(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all text-sm"
+        >
+          <LogOut className="w-4 h-4" />
+          Logout
+        </button>
+        <Link
+          href="/trips"
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all text-sm"
+        >
+          <Compass className="w-4 h-4" />
+          My Trips
+        </Link>
+      </div>
+
+      {/* Mobile: hamburger + dropdown */}
+      <div className="sm:hidden relative">
+        <button
+          type="button"
+          onClick={() => setMenuOpen((o) => !o)}
+          aria-label="Open menu"
+          className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 transition-all"
+        >
+          {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+        {menuOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setMenuOpen(false)}
+            />
+            <div className="absolute right-0 mt-2 w-52 rounded-xl bg-[#0f0a1a]/95 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-50 overflow-hidden">
+              <Link
+                href="/profile"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 text-sm text-violet-200 hover:bg-white/5 transition-colors"
+              >
+                <User className="w-4 h-4" />
+                {userName || "Profile"}
+              </Link>
+              <Link
+                href="/ask"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
+              >
+                <Bot className="w-4 h-4" />
+                Ask KB
+              </Link>
+              <Link
+                href="/chat"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Chat
+              </Link>
+              <Link
+                href="/trips"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
+              >
+                <Compass className="w-4 h-4" />
+                My Trips
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setShowLogoutConfirm(true);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </>
   );
 
   const content =
