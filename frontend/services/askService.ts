@@ -1,6 +1,10 @@
 import { getToken } from "@/services/authService";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === "development"
+    ? "http://localhost:8000/api/v1"
+    : "https://kelana-ai-343669a3.fastapicloud.dev/api/v1");
 
 export interface AskResponse {
   question: string;
