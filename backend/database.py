@@ -20,6 +20,7 @@ Base = declarative_base()
 
 import models.trip
 import models.user
+import models.conversation
 
 # create all tables
 def init_db() -> None:

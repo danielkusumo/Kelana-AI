@@ -1,8 +1,8 @@
 # KelanaAI
 
-> **Versi:** `v0.9.0`  
+> **Versi:** `v0.10.0`  
 > **Tipe Aplikasi:** Full-Stack Web App (FastAPI Backend + Next.js Frontend)  
-> **Fokus:** Trip Planner dengan Database PostgreSQL, AI-Powered Itinerary (AWS Bedrock), **Authentication (JWT) & Per-User Data Ownership**, dan **Knowledge Base (RAG) Tanya-Jawab**
+> **Fokus:** Trip Planner dengan Database PostgreSQL, AI-Powered Itinerary (AWS Bedrock), **Authentication (JWT) & Per-User Data Ownership**, **Knowledge Base (RAG) Tanya-Jawab**, dan **Percakapan Multi-Turn (Chat)**
 
 ---
 
@@ -10,13 +10,15 @@
 
 **KelanaAI** adalah aplikasi perencanaan perjalanan full-stack yang terdiri dari:
 
-- **Backend (Web API):** FastAPI + PostgreSQL + AWS Bedrock. Menyediakan CRUD lengkap serta menghasilkan rekomendasi itinerary detail (jadwal harian, estimasi anggaran, kuliner, transportasi) menggunakan AI. Dilengkapi **autentikasi JWT** dan **ownership check** — setiap user hanya dapat melihat, mengubah, dan menghapus trip miliknya sendiri.
+- **Backend (Web API):** FastAPI + PostgreSQL + AWS Bedrock. Menyediakan CRUD lengkap serta menghasilkan rekomendasi itinerary detail (jadwal harian, estimasi anggaran, kuliner, transportasi) menggunakan AI. Dilengkapi **autentikasi JWT** dan **ownership check** — setiap user hanya dapat melihat, mengubah, dan menghapus trip maupun percakapan miliknya sendiri.
 - **Frontend (Next.js):** Antarmuka web futuristik bertema *space/cosmic* dengan fitur utama:
   - **Home** (`/`) — Form trip planner + loading animasi + auto-redirect ke dashboard setelah AI selesai (wajib login)
   - **Login / Register** — Halaman autentikasi akun
   - **Profile** (`/profile`) — Info pengguna yang sedang login
   - **Dashboard** (`/trips`) — History trip milik user dengan **search, sort & pagination**
   - **Detail** (`/trips/[id]`) — Tampilan itinerary AI per trip dengan hero image + tombol delete
+  - **Ask the Bot** (`/ask`) — Tanya ke Knowledge Base (RAG), bandingkan dengan base model (wajib login)
+  - **Chat** (`/chat`) — Percakapan multi-turn dengan base model + riwayat tersimpan (wajib login)
 
 ---
 
@@ -34,13 +36,18 @@ kelana-ai/
 │   ├── models/
 │   │   ├── trip.py               # SQLAlchemy ORM model for Trip (dengan user_id)
 │   │   ├── user.py               # SQLAlchemy ORM model for User
+│   │   ├── conversation.py       # SQLAlchemy ORM model Conversation + Message
 │   │   └── migrate.py            # Custom SQL migration runner
-│   ├── migrations/               # 001_create_users.sql, 002_add_user_id_to_trips.sql
+│   ├── migrations/               # 001_create_users, 002_add_user_id_to_trips,
+│   │                             # 003_create_converstations_and_messages,
+│   │                             # 004_add_conversation_title, 005_add_conversation_summary
 │   └── services/
 │       ├── trip_service.py       # Business logic & helper functions
-│       ├── bedrock_service.py    # AWS Bedrock AI integration
+│       ├── bedrock_service.py    # AWS Bedrock AI integration (+ base chat & summarizer)
 │       ├── auth_service.py       # Register, login, JWT, password hashing
-│       └── kb_service.py         # Knowledge Base (RAG) retrieval + grounded answer
+│       ├── kb_service.py         # Knowledge Base (RAG): retrieve_context + generate_answer
+│       ├── prompt_builder.py     # Prompt builder (single-shot & multi-turn dari history)
+│       └── conversation_service.py # Orkestrasi percakapan (CRUD, title, memori: trunc+summary)
 └── frontend/
     ├── .env.local                # API_URL
     ├── app/
@@ -51,6 +58,7 @@ kelana-ai/
     │   ├── register/             # Halaman registrasi
     │   ├── profile/              # Halaman profil pengguna
     │   ├── ask/                  # Halaman Knowledge Base (RAG) search & bandingkan
+    │   ├── chat/                 # Halaman percakapan multi-turn (sidebar + thread)
     │   └── trips/
     │       ├── page.tsx          # Dashboard history (search + sort + pagination)
     │       └── [id]/page.tsx     # Detail trip itinerary (+ tombol delete)
@@ -66,12 +74,14 @@ kelana-ai/
     ├── services/
     │   ├── tripService.ts        # API calls ke backend (getTrips, getTrip, generateTrip, deleteTrip)
     │   ├── authService.ts        # Auth API calls + session (token) management
-    │   └── askService.ts         # API calls ke Knowledge Base (askKnowledgeBase, askBaseModel)
+    │   ├── askService.ts         # API calls ke Knowledge Base (askKnowledgeBase, askBaseModel)
+    │   └── chatService.ts        # API calls percakapan (create/list/get/send/rename/delete)
     ├── lib/
     │   └── destination.ts        # Pemetaan destinasi → hero image & flag
     ├── types/
     │   ├── trip.ts               # TypeScript interfaces (TripRequest, TripResponse)
-    │   └── auth.ts               # TypeScript interfaces (AuthResponse, AuthUser, dll)
+    │   ├── auth.ts               # TypeScript interfaces (AuthResponse, AuthUser, dll)
+    │   └── chat.ts               # TypeScript interfaces (Conversation, ChatMessage, dll)
     ├── public/                   # Hero images (America, China, Indonesia, Japan, Singapore, world)
     └── package.json
 ```
@@ -79,6 +89,44 @@ kelana-ai/
 ---
 
 ## Fitur Utama
+
+### v0.10.0 — Percakapan Multi-Turn (Chat)
+
+Halaman baru **Chat** (`/chat`) untuk berdiskusi multi-turn dengan **base foundation model** (bukan RAG), lengkap dengan riwayat yang tersimpan per percakapan:
+
+#### 1. Send Message API — orkestrasi di backend
+
+- **`POST /api/v1/conversations/{id}/messages`** — menerima pesan user, menyimpan, menjawab via base model, lalu menyimpan balasan asisten.
+- Seluruh konteks (histori, pembatasan konteks, ringkasan) dirakit oleh **backend, bukan model** (`conversation_service.py`).
+
+#### 2. Memori percakapan (in-context, bukan pelatihan)
+
+- Setiap turn mengirim **seluruh riwayat pesan dalam percakapan itu** ke model (`generate_base_model_chat`), sehingga model menyambung konteks turn sebelumnya.
+- Riwayat disimpan di tabel `messages` (per `conversation_id`) → tahan reload & dapat dilanjutkan kapan saja.
+- Model bersifat stateless: tidak ada pembelajaran/penambahan pengetahuan; hanya konteks yang disuntik ulang.
+
+#### 3. Prompt builder (`prompt_builder.py`)
+
+- `build_single_prompt(context, question)` — untuk `/ask` (satu putaran).
+- `build_chat_prompt(context, history, question)` — menyusun prompt multi-turn dari riwayat percakapan (bagian dokumen + riwayat + pertanyaan terbaru).
+
+#### 4. Truncation & summarization riwayat
+
+- Jika riwayat melebihi `CHAT_MAX_KEEP_MESSAGES` (default `16` pesan), pesan yang lebih lama di-**truncate** dan di-**ringkas** (`summarize_conversation`), disimpan di kolom `conversations.summary` (migrasi `005`), lalu disuntikkan sebagai **system prompt** di turn berikutnya. Sebelum batas, riwayat penuh tetap dikirim.
+
+#### 5. Judul percakapan (rename & delete)
+
+- **Title awal = pertanyaan pertama** (auto-set saat pesan pertama; untuk percakapan lama fallback ke pesan pertama).
+- **Rename** — `PATCH /api/v1/conversations/{id}` (icon pensil di header thread).
+- **Delete** — `DELETE /api/v1/conversations/{id}` menghapus percakapan + semua pesannya (403 jika bukan milik user).
+- Sidebar menampilkan title tiap percakapan; tombol "New chat" selalu membuat percakapan baru.
+
+#### 6. Halaman `/chat` — UI percakapan
+
+- **Sidebar** daftar percakapan + tombol "New chat", **thread** pesan (user kanan, asisten kiri dengan render Markdown), **composer** kirim pesan, banner error selalu tampil, dan input auto-focus saat chat baru dibuka.
+- Melanjutkan percakapan lama (klik item → memuat semua pesannya).
+
+---
 
 ### v0.9.0 — Knowledge Base (RAG) & Tanya-Jawab Travel
 
@@ -166,6 +214,7 @@ Menampilkan informasi pengguna yang sedang login: avatar placeholder bergaya **I
 | Sign In (Login) | ![Sign In](assets/signin.png) |
 | My Trips (Dashboard) | ![My Trips](assets/trips.png) |
 | Ask the Bot (Knowledge Base) | ![Ask the Bot](assets/bot.png) |
+| Chat | ![Chat](assets/chat.png) |
 
 ---
 
@@ -390,6 +439,19 @@ class Trip(Base):
 | `POST` | `/api/v1/ask` | Tanya ke Bedrock Knowledge Base → jawaban grounded + daftar sumber (`sources`, `accepted`) |
 | `POST` | `/api/v1/ask/base` | Tanya langsung ke foundation model tanpa knowledge base (baseline pembanding) |
 
+### Conversations (Chat, base model)
+
+> **Catatan:** Semua endpoint percakapan mewajibkan header `Authorization: Bearer <token>` dan dibatasi hanya milik user yang login (404 jika tidak ada, 403 jika bukan milik user).
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| `POST` | `/api/v1/conversations` | Membuat percakapan baru |
+| `GET` | `/api/v1/conversations` | Daftar percakapan milik user (+ `title`, `message_count`, `last_message`) |
+| `GET` | `/api/v1/conversations/{id}` | Detail percakapan + semua pesan (`messages`) |
+| `PATCH` | `/api/v1/conversations/{id}` | Mengubah judul percakapan (`title`) |
+| `DELETE` | `/api/v1/conversations/{id}` | Menghapus percakapan + semua pesannya |
+| `POST` | `/api/v1/conversations/{id}/messages` | Kirim pesan → balasan base model + riwayat (`conversation`) |
+
 ---
 
 ## Frontend Routes
@@ -403,6 +465,7 @@ class Trip(Base):
 | `/trips` | Dashboard | History trip milik user dengan search & sort | ✅ Wajib login |
 | `/trips/{id}` | Detail | Itinerary lengkap per trip + tombol delete | ✅ Wajib login |
 | `/ask` | Ask the Bot | Tanya Knowledge Base (RAG) & bandingkan dengan base model | ✅ Wajib login |
+| `/chat` | Chat | Percakapan multi-turn dengan base model (riwayat, rename & delete) | ✅ Wajib login |
 
 ---
 
@@ -516,6 +579,9 @@ MODEL_ID=amazon.nova-lite-v1:0
 KNOWLEDGE_BASE_ID=your_knowledge_base_id
 KNOWLEDGE_BASE_MODEL_ARN=arn:aws:bedrock:<region>::foundation-model/amazon.nova-lite-v1:0
 KB_SCORE_THRESHOLD=0.4
+
+# Optional: Chat memory (default: 16)
+CHAT_MAX_KEEP_MESSAGES=16
 
 # JWT
 JWT_SECRET_KEY=your_super_secret_key
@@ -680,7 +746,8 @@ curl -X DELETE "http://127.0.0.1:8000/api/v1/trips/1" \
 
 | Versi  | Tag      | Deskripsi |
 |--------|----------|-----------|
-| **v0.9.0** | `v0.9.0` | **Knowledge Base (RAG) & Tanya-Jawab Travel**: penambahan `kb_service.py` (retrieve Bedrock Knowledge Base + grounded answer via `converse`), endpoint `POST /api/v1/ask` & `POST /api/v1/ask/base`, scoring & ambang kepercayaan `KB_SCORE_THRESHOLD`, deduplikasi sumber per dokumen, halaman `/ask` (web-based search UI dengan toggle Knowledge Base ↔ Base Model, status badge Grounded/No match, dan sources panel berisi nama dokumen + relevance bar + skor), serta `services/askService.ts` |
+| **v0.10.0** | `v0.10.0` | **Percakapan Multi-Turn (Chat, base model)**: model `Conversation` + `Message` (kolom `title` & `summary`), migrasi `003`, `004`, `005`, `conversation_service.py` (CRUD, auto-title = pertanyaan pertama, rename via PATCH, delete, orkestrasi send-message dengan memori in-context), `prompt_builder.py` (single-shot & multi-turn), `bedrock_service.py` (`generate_base_model_chat` multi-turn + `summarize_conversation`), refactor `kb_service.py` (`retrieve_context` + `generate_answer`), endpoint `/api/v1/conversations*` (JWT + ownership), serta frontend `/chat` (sidebar, thread Markdown, composer, banner error, auto-focus) + `chatService.ts` + `types/chat.ts`; chat memakai base model, memori: truncation (keep-N terakhir) + rolling summary sebagai system prompt |
+| v0.9.0 | `v0.9.0` | **Knowledge Base (RAG) & Tanya-Jawab Travel**: penambahan `kb_service.py` (retrieve Bedrock Knowledge Base + grounded answer via `converse`), endpoint `POST /api/v1/ask` & `POST /api/v1/ask/base`, scoring & ambang kepercayaan `KB_SCORE_THRESHOLD`, deduplikasi sumber per dokumen, halaman `/ask` (web-based search UI dengan toggle Knowledge Base ↔ Base Model, status badge Grounded/No match, dan sources panel berisi nama dokumen + relevance bar + skor), serta `services/askService.ts` |
 | v0.8.0 | `v0.8.0` | **Authentication & Per-User Ownership**: penambahan `auth_service.py` (register, login, JWT HS256 + bcrypt), model `User` & kolom `user_id` di `Trip`, migrasi `001_create_users` & `002_add_user_id_to_trips`, endpoint `/api/v1/auth/*`, ownership check (GET/PUT/DELETE return 403 jika bukan milik user), halaman `/login`, `/register`, `/profile`, komponen `RequireAuth` & `ConfirmModal`, tombol delete trip dengan konfirmasi, dan logout dengan konfirmasi |
 | v0.7.0 | `v0.7.0` | **Dashboard History + Search & Sort + Direct API**: penambahan halaman `/trips` (history grid dengan search, sort & pagination), halaman `/trips/[id]` (detail itinerary), auto-redirect ke dashboard setelah generate, direct browser→backend via CORS, `services/tripService.ts`, `TripCard.tsx` (flag destinasi, format `USD 2,000`, category badge color-coded, travel style badge), dan `.env.local` |
 | v0.6.0 | `v0.6.0` | **Next.js Frontend**: penambahan frontend Next.js dengan UI space/cosmic, trip planner form, hero destination image, render itinerary AI yang rapi (day-by-day timeline, budget table, food & transport suggestions), loading state animasi, responsive layout, dan footer |

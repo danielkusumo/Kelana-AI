@@ -7,6 +7,7 @@ from services.trip_service import (get_trip_category, calculate_daily_budget, ge
 from services.bedrock_service import get_ai_recommendation, ask_base_model
 from services.auth_service import register, login, get_user_id
 from services.kb_service import ask_knowledge_base
+from services.conversation_service import (create_conversation, list_conversations, get_conversation, send_message, update_conversation, delete_conversation)
 
 class TripRequest(BaseModel):
     destination: str
@@ -25,6 +26,12 @@ class LoginRequest(BaseModel):
 
 class QuestionRequest(BaseModel):
     question: str
+
+class MessageRequest(BaseModel):
+    content: str
+
+class ConversationUpdateRequest(BaseModel):
+    title: str
 
 app = FastAPI()
 
@@ -196,3 +203,33 @@ def ask_base_endpoint(req: QuestionRequest):
         "question": req.question,
         "answer": answer,
     }
+
+@app.post("/api/v1/conversations")
+def create_conversation_endpoint(authorization: str | None = Header(default=None)):
+    user_id = get_user_id(authorization)
+    return create_conversation(user_id)
+
+@app.get("/api/v1/conversations")
+def get_conversations_endpoint(authorization: str | None = Header(default=None)):
+    user_id = get_user_id(authorization)
+    return list_conversations(user_id)
+
+@app.get("/api/v1/conversations/{conversation_id}")
+def get_conversation_endpoint(conversation_id: int, authorization: str | None = Header(default=None)):
+    user_id = get_user_id(authorization)
+    return get_conversation(user_id, conversation_id)
+
+@app.post("/api/v1/conversations/{conversation_id}/messages")
+def send_message_endpoint(conversation_id: int, req: MessageRequest, authorization: str | None = Header(default=None)):
+    user_id = get_user_id(authorization)
+    return send_message(user_id, conversation_id, req.content)
+
+@app.patch("/api/v1/conversations/{conversation_id}")
+def update_conversation_endpoint(conversation_id: int, req: ConversationUpdateRequest, authorization: str | None = Header(default=None)):
+    user_id = get_user_id(authorization)
+    return update_conversation(user_id, conversation_id, req.title)
+
+@app.delete("/api/v1/conversations/{conversation_id}")
+def delete_conversation_endpoint(conversation_id: int, authorization: str | None = Header(default=None)):
+    user_id = get_user_id(authorization)
+    return delete_conversation(user_id, conversation_id)

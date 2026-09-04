@@ -79,18 +79,17 @@ def _format_source(result: dict[str, Any]) -> dict[str, Any]:
         "snippet": snippet,
     }
 
-def ask_knowledge_base(question: str) -> dict[str, Any]:
+def retrieve_context(question: str) -> dict[str, Any]:
     """
-    Ask the Bedrock knowledge base a question and generate a grounded answer (RAG).
+    Retrieve & filter the most relevant documents from the Bedrock knowledge base.
 
     Returns a dict:
-        {"answer": str, "sources": [...], "accepted": bool}
+        {"context": str, "sources": [...], "accepted": bool}
 
     `sources` only includes documents with score >= KB_SCORE_THRESHOLD (default 0.4).
-    If no source passes the threshold, the answer is a refusal message.
+    If no source passes the threshold, `accepted` is False and `context` is empty.
     """
     kb_id = os.getenv("KNOWLEDGE_BASE_ID")
-    model_id = os.getenv("KNOWLEDGE_BASE_MODEL_ARN")
 
     if not kb_id:
         raise ValueError("KNOWLEDGE_BASE_ID is not set in the environment.")
@@ -126,26 +125,19 @@ def ask_knowledge_base(question: str) -> dict[str, Any]:
         context_parts.append(content)
 
     if not accepted_sources:
-        return {
-            "answer": (
-                "Mohon maaf, saya tidak dapat membantu menjawab pertanyaan ini. "
-                "Informasi yang relevan tidak ditemukan di dokumen perjalanan yang tersedia "
-                "atau relevansinya di bawah ambang batas kepercayaan."
-            ),
-            "sources": [],
-            "accepted": False,
-        }
+        return {"context": "", "sources": [], "accepted": False}
 
-    context = "\n\n".join(context_parts)
+    return {
+        "context": "\n\n".join(context_parts),
+        "sources": accepted_sources,
+        "accepted": True,
+    }
 
-    prompt = (
-        "You are a helpful travel assistant. Answer the question using ONLY the "
-        "travel documentation below. Be concise and structured. "
-        "If the answer is not in the documents, say you cannot answer.\n\n"
-        f"--- DOCUMENTS ---\n{context}\n\n"
-        f"--- QUESTION ---\n{question}\n\n"
-        "--- ANSWER ---"
-    )
+def generate_answer(prompt: str) -> str:
+    """Generate a text answer from a fully-built prompt via Amazon Bedrock."""
+    model_id = os.getenv("KNOWLEDGE_BASE_MODEL_ARN")
+    if not model_id:
+        raise ValueError("KNOWLEDGE_BASE_MODEL_ARN is not set in the environment.")
 
     converse_client = _get_converse_client()
     response = converse_client.converse(
@@ -158,10 +150,32 @@ def ask_knowledge_base(question: str) -> dict[str, Any]:
         block["text"]
         for block in output_message["content"] if "text" in block
     ]
-    answer = "\n".join(text_parts).strip() or "Mohon maaf, saya tidak dapat membantu."
+    return "\n".join(text_parts).strip() or "Mohon maaf, saya tidak dapat membantu."
 
-    return {
-        "answer": answer,
-        "sources": accepted_sources,
-        "accepted": True,
-    }
+def ask_knowledge_base(question: str) -> dict[str, Any]:
+    """
+    Ask the Bedrock knowledge base a question and generate a grounded answer (RAG).
+
+    Returns a dict:
+        {"answer": str, "sources": [...], "accepted": bool}
+
+    `sources` only includes documents with score >= KB_SCORE_THRESHOLD (default 0.4).
+    If no source passes the threshold, the answer is a refusal message.
+    """
+    from services.prompt_builder import build_single_prompt
+
+    result = retrieve_context(question)
+
+    if not result["accepted"]:
+        return {
+            "answer": (
+                "Mohon maaf, saya tidak dapat membantu menjawab pertanyaan ini. "
+                "Informasi yang relevan tidak ditemukan di dokumen perjalanan yang tersedia "
+                "atau relevansinya di bawah ambang batas kepercayaan."
+            ),
+            "sources": [],
+            "accepted": False,
+        }
+
+    answer = generate_answer(build_single_prompt(result["context"], question))
+    return {"answer": answer, "sources": result["sources"], "accepted": True}

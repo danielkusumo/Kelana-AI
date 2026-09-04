@@ -1,4 +1,5 @@
 import os
+from typing import Any
 import boto3
 from dotenv import load_dotenv
 
@@ -141,3 +142,70 @@ def ask_base_model(question: str) -> str:
         for block in output_message["content"] if "text" in block
     ]
     return "\n".join(text_parts)
+
+
+def generate_base_model_chat(turns: list[dict[str, str]], system_text: str | None = None) -> str:
+    """
+    Generate a reply from the base foundation model given a full multi-turn
+    conversation (`turns` = [{"role": "user"|"assistant", "content": str}, ...]).
+
+    No knowledge base is used — the model answers from its own knowledge and the
+    conversation history provided. `system_text` (if given) is passed as a system
+    prompt, used to inject a rolling summary of the earlier conversation.
+    """
+    model_id = os.getenv("MODEL_ID", "amazon.nova-lite-v1:0")
+
+    messages = [
+        {"role": t["role"], "content": [{"text": t["content"]}]}
+        for t in turns
+    ]
+
+    kwargs: dict[str, Any] = {"modelId": model_id, "messages": messages}
+    if system_text:
+        kwargs["system"] = [{"text": system_text}]
+
+    client = get_bedrock_client()
+    response = client.converse(**kwargs)
+
+    output_message = response["output"]["message"]
+    text_parts = [
+        block["text"]
+        for block in output_message["content"] if "text" in block
+    ]
+    return "\n".join(text_parts)
+
+
+def summarize_conversation(text: str) -> str:
+    """
+    Condense a (portion of a) conversation into a short, dense summary. Used to
+    keep long chat histories inside the model's context window.
+    """
+    model_id = os.getenv("MODEL_ID", "amazon.nova-lite-v1:0")
+
+    prompt = (
+        "You are a faithful conversation summarizer. Condense ONLY the travel "
+        "Q&A conversation below. Rules:\n"
+        "1. Reproduce only facts, destinations, dates, budgets, preferences and "
+        "conclusions that are actually stated in the conversation.\n"
+        "2. Do NOT add, infer or invent any detail that is not in the conversation "
+        "(no made-up trips, cities, or numbers).\n"
+        "3. If a fact is ambiguous, omit it rather than guess.\n"
+        "4. Keep it under 200 words.\n\n"
+        f"--- CONVERSATION ---\n{text}\n\n"
+        "--- SUMMARY ---"
+    )
+
+    client = get_bedrock_client()
+    response = client.converse(
+        modelId=model_id,
+        messages=[{"role": "user", "content": [{"text": prompt}]}],
+    )
+
+    output_message = response["output"]["message"]
+    text_parts = [
+        block["text"]
+        for block in output_message["content"] if "text" in block
+    ]
+    summary = "\n".join(text_parts).strip()
+    # Fallback if the model returned nothing useful.
+    return summary or text[:1000]
