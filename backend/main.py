@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from database import init_db, SessionLocal
 from models.trip import Trip
+from contextlib import asynccontextmanager
 from services.trip_service import (get_trip_category, calculate_daily_budget, get_transport, get_recommendations)
 from services.bedrock_service import get_ai_recommendation, ask_base_model
 from services.auth_service import register, login, get_user_id
